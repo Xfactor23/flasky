@@ -1,9 +1,10 @@
 pipeline {
-  environment {
-    registry = 'xfactor23/flask_app'
-    registryCredentails = 'docker'
-    cluster_name = 'skillstorm'
-  }
+    environment {
+        registry = 'xfactor23/flask_app'
+        registryCredentials = 'docker'
+        cluster_name = 'skillstorm'
+        namespace = 'xaviert23'
+    }
   agent {
     node {
       label 'docker'
@@ -11,43 +12,42 @@ pipeline {
 
   }
   stages {
-    stage('GIt') {
+    stage('Git') {
       steps {
         git(url: 'https://github.com/Xfactor23/flasky.git', branch: 'main')
       }
     }
-
 stage('Build Stage') {
-  steps {
-    script {
-      dockerImage = docker.build(registry)
+    steps {
+        script {
+            dockerImage = docker.build(registry)
+        }
+      }
     }
-  }
-}
 stage('Deploy Stage') {
-  steps {
-    script {
-      docker.withRegistry('', registryCredentails) {
-           dockerImage.push()
-          }  
+    steps {
+        script {
+           docker.withRegistry('', registryCredentials) {
+                dockerImage.push()
+            }
           }
         }
-stage('kubernetes') {
+      }
+stage('Kubernetes') {
   steps {
-    withCredentials([aws(accessKeyVarible: 'AWS_ACCESS_KEY_ID', credentials:'AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId:'AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
       sh "aws eks update-kubeconfig --region us-east-1 --name ${cluster_name}"
       script{
         try{
           sh "kubectl create namespace ${namespace}"
-        }catch (Exception e ) {
-          echo "Exception handled"
+        }catch (Exception e) {
+            echo "Exception handled"
+        }
+        }
+        sh "kubectl apply -f deployment.yaml -n ${namespace}"
+        sh "kubectl -n ${namespace} rollout restart deployment flaskcontainer"
         }
       }
     }
-    sh "kubectl apply -f deployment.yaml -n ${namespace}"
-    sh "kubectl -n ${namespace} rollout restart deployment flaskcontainer"
   }
 }
-}  
-}
-}  
