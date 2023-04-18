@@ -1,4 +1,9 @@
 pipeline {
+  environment {
+    registry = 'xfactor23/flask_app'
+    registryCredentails = 'docker'
+    cluster_name = 'skillstorm'
+  }
   agent {
     node {
       label 'docker'
@@ -12,23 +17,21 @@ pipeline {
       }
     }
 
-    stage('Build') {
-      steps {
-        sh 'docker build -t xfactor23/flask_app .'
-      }
+stage('Build Stage') {
+  steps {
+    script {
+      dockerImage = docker.build(registry)
     }
-
-    stage('Docker Login') {
-      steps {
-        sh 'docker login -u xfactor23 -p dckr_pat_Vv4qAiBud5DWEHAlrPs1zJP6rKA'
-      }
-    }
-
-    stage('Docker Push') {
-      steps {
-        sh 'docker push xfactor23/flask_app'
-      }
-    }
-
   }
 }
+stage('Deploy Stage') {
+  steps {
+    script {
+      docker.withRegistry('', registryCredentails) {
+           dockerImage.push()
+          }  
+          }
+        }
+}  
+}
+}  
